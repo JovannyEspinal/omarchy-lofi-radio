@@ -3,7 +3,7 @@
 Continuous Lofi Hip Hop and Synthwave radio in the Omarchy Quattro bar, with
 headless playback and a live, theme-aware equalizer.
 
-![Lofi Radio playing Synthwave with a live equalizer in the Omarchy bar](preview.png)
+![Lofi Radio playback, station switching, and live equalizer demo](assets/demo.gif)
 
 | Ready | Playing in the bar |
 | --- | --- |
