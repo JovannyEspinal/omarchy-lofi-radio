@@ -18,12 +18,11 @@ BarWidget {
     if (isNaN(configured) || configured === 0) return 60
     return Math.max(15, Math.min(120, Math.round(configured)))
   }
-  readonly property bool visualizerOpen: playbackState === "playing" && button.tooltipHovered
+  readonly property bool visualizerOpen: button.tooltipHovered
   readonly property string stateIcon: playbackState === "playing" ? "󰝚"
     : playbackState === "paused" ? "󰐊"
     : playbackState === "error" ? "󰀪"
     : "󰝚"
-  readonly property string stateLabel: playbackState.charAt(0).toUpperCase() + playbackState.slice(1)
 
   function refresh() {
     if (!statusProcess.running) statusProcess.running = true
@@ -110,7 +109,7 @@ BarWidget {
     labelVisible: false
     hasVisualContent: true
     fixedWidth: root.playbackState === "playing" ? Style.space(64) : Style.bar.statusSlot
-    tooltipText: root.visualizerOpen ? "" : root.stationName + " · " + root.stateLabel + "\nLeft: play/pause · Middle: switch station · Right: stop"
+    tooltipText: ""
 
     Text {
       anchors.centerIn: parent
@@ -258,6 +257,7 @@ BarWidget {
       }
 
       Item {
+        visible: root.playbackState === "playing"
         width: parent.width
         height: Style.space(54)
 
