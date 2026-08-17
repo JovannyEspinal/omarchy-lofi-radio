@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "espi.lofi-radio",
+  "name": "Lofi Radio",
+  "version": "1.0.0",
+  "author": "espi",
+  "license": "MIT",
+  "description": "Play a configurable audio-only focus stream from the Omarchy bar.",
+  "kinds": ["bar-widget"],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Lofi Radio",
+    "description": "Audio-only focus radio with play, pause, restart, and stop controls.",
+    "category": "Media",
+    "allowMultiple": false,
+    "defaultSection": "center",
+    "defaults": {
+      "visualizerFps": 60
+    },
+    "schema": [
+      {
+        "key": "visualizerFps",
+        "type": "integer",
+        "label": "Visualizer frame rate",
+        "min": 15,
+        "max": 120,
+        "step": 15,
+        "defaultValue": 60,
+        "description": "Higher values look smoother but use more CPU while the visualizer is visible."
+      }
+    ]
+  }
+}
