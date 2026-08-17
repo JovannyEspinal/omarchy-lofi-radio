@@ -3,9 +3,17 @@
 An audio-only controller for the Lofi Girl focus stream in the Omarchy Quattro
 bar.
 
-This project is unofficial and is not affiliated with Omarchy, 37signals,
-YouTube, or Lofi Girl. Stream availability and rights remain with their
+This project is unofficial and is not affiliated with Omarchy, YouTube, or Lofi Girl. Stream availability and rights remain with their
 respective owners.
+
+<img width="655" height="166" alt="image" src="https://github.com/user-attachments/assets/789a0c3b-f89d-476b-a500-11a5afe4dac2" />
+
+<img width="663" height="217" alt="image" src="https://github.com/user-attachments/assets/0f005e47-ac69-4a57-84ef-362be4de02a0" />
+
+<img width="456" height="110" alt="image" src="https://github.com/user-attachments/assets/058bb5d2-2269-400e-9471-117dc94dadd8" />
+
+
+
 
 ## Features
 
