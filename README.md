@@ -1,27 +1,24 @@
 # Lofi Radio for Omarchy
 
-An audio-only controller for the Lofi Girl focus stream in the Omarchy Quattro
-bar.
+Continuous Lofi Hip Hop and Synthwave radio in the Omarchy Quattro bar, with
+headless playback and a live, theme-aware equalizer.
 
-This project is unofficial and is not affiliated with Omarchy, YouTube, or Lofi Girl. Stream availability and rights remain with their
-respective owners.
+![Lofi Radio playing Synthwave with a live equalizer in the Omarchy bar](preview.png)
 
-<img width="655" height="166" alt="image" src="https://github.com/user-attachments/assets/789a0c3b-f89d-476b-a500-11a5afe4dac2" />
+| Ready | Playing in the bar |
+| --- | --- |
+| ![Lofi Radio idle hover controls](assets/idle.png) | ![Lofi Radio inline bar equalizer](assets/bar.png) |
 
-<img width="663" height="217" alt="image" src="https://github.com/user-attachments/assets/0f005e47-ac69-4a57-84ef-362be4de02a0" />
-
-<img width="456" height="110" alt="image" src="https://github.com/user-attachments/assets/058bb5d2-2269-400e-9471-117dc94dadd8" />
-
-
-
+This project is unofficial and is not affiliated with Omarchy, YouTube, or
+Lofi Girl. Stream availability and rights remain with their respective owners.
 
 ## Features
 
 - Audio-only playback with no video window
-- Live playing, paused, stopped, and error states in the bar
-- Hover equalizer driven by the actual PipeWire output while playing
+- Clear playing, paused, idle, and error states in the bar
+- Inline and hover equalizers driven by the actual PipeWire output
 - Configurable 15–120 FPS visualizer (60 FPS by default)
-- Play/pause, restart, and stop controls
+- Play/pause, station switching, and stop controls
 - Single-player locking and private per-user runtime files
 - Continuous playback through YouTube's official player in headless Chromium
 - YouTube Premium support through a dedicated, persistent Chromium profile
@@ -37,6 +34,12 @@ respective owners.
 
 The plugin never requests elevated privileges or installs packages itself.
 
+Install the required packages if they are not already present:
+
+```sh
+omarchy pkg add chromium cava
+```
+
 ## YouTube Premium
 
 Sign in once using the plugin's isolated Chromium profile:
@@ -50,8 +53,6 @@ Future headless playback uses the same profile, so your Premium membership is
 recognized without sharing your normal browser profile with the plugin.
 
 ## Install
-
-Once the repository is public:
 
 ```sh
 omarchy plugin add https://github.com/JovannyEspinal/omarchy-lofi-radio.git --enable
