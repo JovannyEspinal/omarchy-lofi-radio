@@ -66,6 +66,30 @@ omarchy plugin add https://github.com/JovannyEspinal/omarchy-lofi-radio.git --en
 
 Playback uses YouTube's official Chromium player with the dedicated profile.
 
+## Optional keybindings
+
+The plugin does not install or overwrite keybindings. If these shortcuts are
+free on your system, add them to `~/.config/hypr/bindings.lua`:
+
+```lua
+local lofi_control =
+  os.getenv("HOME") .. "/.config/omarchy/plugins/espi.lofi-radio/control.sh"
+
+o.bind("SUPER + ALT + M", "Lofi Radio: Play/pause", lofi_control .. " toggle")
+o.bind("SUPER + ALT + N", "Lofi Radio: Next station", lofi_control .. " switch")
+o.bind("SUPER + ALT + X", "Lofi Radio: Stop", lofi_control .. " stop")
+```
+
+Check for conflicts before adding them:
+
+```sh
+omarchy menu keybindings --print
+```
+
+Hyprland normally reloads the file automatically. Run `hyprctl reload` if the
+new shortcuts do not appear immediately. Any other unbound key combinations
+can be used instead.
+
 ## Validate
 
 ```sh
