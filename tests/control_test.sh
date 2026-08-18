@@ -47,6 +47,7 @@ write_identity() {
 
 write_identity "$player_start_time"
 player_identity >/dev/null || fail 'valid identity was rejected'
+[[ $(player_pgid) == "$player_pgid" ]] || fail 'player_pgid returned more than the process group id'
 printf 'ok - accepts the process instance started by the controller\n'
 
 write_identity "$((player_start_time + 1))"
@@ -67,3 +68,14 @@ write_identity "$((player_start_time + 1))"
 stop_player
 kill -0 "$player_pid" 2>/dev/null || fail 'stale state killed an unrelated process'
 printf 'ok - stale state cannot signal an unrelated process group\n'
+
+# Simulate a live orphan after its controller state disappeared. The production
+# discovery is exercised separately on real Chromium; this checks the stop path.
+write_identity "$player_start_time"
+rm -f "$pid_path" "$pgid_path" "$start_time_path" "$exe_path"
+orphan_player_identity() {
+  printf '%s %s %s %s\n' "$player_pid" "$player_pgid" "$player_start_time" "$player_executable"
+}
+stop_player
+kill -0 "$player_pid" 2>/dev/null && fail 'orphaned player was not stopped'
+printf 'ok - stops a verified orphan when identity files are missing\n'
