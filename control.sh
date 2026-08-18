@@ -12,6 +12,8 @@ readonly state_dir="$state_base/espi-lofi-radio"
 readonly profile_dir="$state_dir/chromium-profile"
 readonly pid_path="$runtime_dir/chromium.pid"
 readonly pgid_path="$runtime_dir/chromium.pgid"
+readonly start_time_path="$runtime_dir/chromium.start-time"
+readonly exe_path="$runtime_dir/chromium.exe"
 readonly paused_path="$runtime_dir/paused"
 readonly station_path="$runtime_dir/station"
 readonly lock_path="$runtime_dir/control.lock"
@@ -47,20 +49,48 @@ station_name() {
   [[ $(current_station) == 2 ]] && printf '%s\n' 'Synthwave' || printf '%s\n' 'Lofi Hip Hop'
 }
 
-player_pid() {
-  local pid
-  [[ -r $pid_path ]] || return 1
+process_start_time() {
+  local pid=$1 stat
+  local -a stat_fields
+  [[ -r /proc/$pid/stat ]] || return 1
+  read -r stat <"/proc/$pid/stat" || return 1
+  stat=${stat##*) }
+  read -r -a stat_fields <<<"$stat"
+  [[ ${stat_fields[19]:-} =~ ^[0-9]+$ ]] || return 1
+  printf '%s\n' "${stat_fields[19]}"
+}
+
+player_identity() {
+  local pid pgid start_time executable actual_pgid actual_start_time actual_executable
+  [[ -r $pid_path && -r $pgid_path && -r $start_time_path && -r $exe_path ]] || return 1
   read -r pid <"$pid_path" || return 1
-  [[ $pid =~ ^[0-9]+$ ]] || return 1
-  kill -0 "$pid" 2>/dev/null || return 1
+  read -r pgid <"$pgid_path" || return 1
+  read -r start_time <"$start_time_path" || return 1
+  read -r executable <"$exe_path" || return 1
+  [[ $pid =~ ^[1-9][0-9]*$ && $pgid =~ ^[1-9][0-9]*$ && $start_time =~ ^[0-9]+$ ]] || return 1
+  [[ $pid == "$pgid" ]] || return 1
+  [[ $executable == /* ]] || return 1
+
+  actual_pgid=$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ') || return 1
+  [[ $actual_pgid == "$pgid" ]] || return 1
+  actual_start_time=$(process_start_time "$pid") || return 1
+  [[ $actual_start_time == "$start_time" ]] || return 1
+  actual_executable=$(readlink -f "/proc/$pid/exe" 2>/dev/null) || return 1
+  [[ $actual_executable == "$executable" ]] || return 1
+  [[ ${actual_executable##*/} == chromium ]] || return 1
+
+  printf '%s %s\n' "$pid" "$pgid"
+}
+
+player_pid() {
+  local pid pgid
+  read -r pid pgid < <(player_identity) || return 1
   printf '%s\n' "$pid"
 }
 
 player_pgid() {
-  local pgid
-  [[ -r $pgid_path ]] || return 1
-  read -r pgid <"$pgid_path" || return 1
-  [[ $pgid =~ ^[0-9]+$ ]] || return 1
+  local pid pgid
+  read -r pid pgid < <(player_identity) || return 1
   printf '%s\n' "$pgid"
 }
 
@@ -70,7 +100,7 @@ is_running() {
 
 start_player() {
   local url=${1:-$(station_url)}
-  local pid pgid
+  local pid pgid start_time executable
 
   command -v chromium >/dev/null 2>&1 || {
     notify_error "Missing dependency: chromium"
@@ -78,7 +108,7 @@ start_player() {
   }
   is_running && return 0
 
-  rm -f -- "$pid_path" "$pgid_path" "$paused_path"
+  rm -f -- "$pid_path" "$pgid_path" "$start_time_path" "$exe_path" "$paused_path"
   : >"$log_path"
 
   nohup setsid chromium \
@@ -95,8 +125,12 @@ start_player() {
   for _ in {1..30}; do
     if kill -0 "$pid" 2>/dev/null; then
       pgid=$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ')
-      if [[ $pgid =~ ^[0-9]+$ ]]; then
+      start_time=$(process_start_time "$pid") || start_time=
+      executable=$(readlink -f "/proc/$pid/exe" 2>/dev/null) || executable=
+      if [[ $pgid == "$pid" && $start_time =~ ^[0-9]+$ && ${executable##*/} == chromium ]]; then
         printf '%s\n' "$pgid" >"$pgid_path"
+        printf '%s\n' "$start_time" >"$start_time_path"
+        printf '%s\n' "$executable" >"$exe_path"
         return 0
       fi
     fi
@@ -125,15 +159,15 @@ open_login() {
 stop_player() {
   local pgid
   if pgid=$(player_pgid); then
-    kill -CONT -- "-$pgid" 2>/dev/null || true
-    kill -TERM -- "-$pgid" 2>/dev/null || true
+    if pgid=$(player_pgid); then kill -CONT -- "-$pgid" 2>/dev/null || true; fi
+    if pgid=$(player_pgid); then kill -TERM -- "-$pgid" 2>/dev/null || true; fi
     for _ in {1..30}; do
       is_running || break
       sleep 0.1
     done
-    is_running && kill -KILL -- "-$pgid" 2>/dev/null || true
+    if pgid=$(player_pgid); then kill -KILL -- "-$pgid" 2>/dev/null || true; fi
   fi
-  rm -f -- "$pid_path" "$pgid_path" "$paused_path"
+  rm -f -- "$pid_path" "$pgid_path" "$start_time_path" "$exe_path" "$paused_path"
 }
 
 toggle_player() {
@@ -196,4 +230,6 @@ main() {
   esac
 }
 
-main "$@"
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+  main "$@"
+fi
