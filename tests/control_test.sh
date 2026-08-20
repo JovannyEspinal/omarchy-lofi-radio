@@ -26,6 +26,8 @@ export XDG_STATE_HOME="$test_dir/state"
 # shellcheck source=../control.sh
 source "$project_dir/control.sh"
 prepare_runtime || fail 'prepare runtime'
+[[ $(station_url) == 'https://www.youtube.com/@LofiGirl/live' ]] || fail 'lofi station does not use the current live channel URL'
+printf 'ok - lofi station uses the current live channel URL\n'
 
 setsid chromium 60 &
 player_pid=$!
