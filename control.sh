@@ -176,15 +176,16 @@ toggle_player() {
     start_player
     return
   fi
-  pgid=$(player_pgid) || return 1
 
   if [[ -e $paused_path ]]; then
-    kill -CONT -- "-$pgid"
-    rm -f -- "$paused_path"
-  else
-    kill -STOP -- "-$pgid"
-    : >"$paused_path"
+    stop_player || return 1
+    start_player
+    return
   fi
+
+  pgid=$(player_pgid) || return 1
+  kill -STOP -- "-$pgid"
+  : >"$paused_path"
 }
 
 main() {

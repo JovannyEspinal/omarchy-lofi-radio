@@ -67,3 +67,26 @@ write_identity "$((player_start_time + 1))"
 stop_player
 kill -0 "$player_pid" 2>/dev/null || fail 'stale state killed an unrelated process'
 printf 'ok - stale state cannot signal an unrelated process group\n'
+
+stop_calls=0
+start_calls=0
+is_running() { return 0; }
+player_pgid() { printf '999999\n'; }
+stop_player() { stop_calls=$((stop_calls + 1)); rm -f -- "$paused_path"; }
+start_player() { start_calls=$((start_calls + 1)); }
+: >"$paused_path"
+toggle_player || fail 'resume toggle failed'
+[[ $stop_calls == 1 ]] || fail 'resume toggle did not stop the paused player'
+[[ $start_calls == 1 ]] || fail 'resume toggle did not start a fresh player'
+[[ ! -e $paused_path ]] || fail 'resume toggle left the paused marker'
+printf 'ok - resume restarts the player instead of sending SIGCONT\n'
+
+stop_calls=0
+start_calls=0
+stop_player() { stop_calls=$((stop_calls + 1)); rm -f -- "$paused_path"; return 1; }
+start_player() { start_calls=$((start_calls + 1)); return 0; }
+: >"$paused_path"
+toggle_player >/dev/null 2>&1 && fail 'resume toggle hid a stop failure'
+[[ $stop_calls == 1 ]] || fail 'resume toggle did not call stop after failure'
+[[ $start_calls == 0 ]] || fail 'resume toggle started after stop failure'
+printf 'ok - resume propagates a stop failure\n'
