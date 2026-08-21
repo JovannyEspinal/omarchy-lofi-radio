@@ -3,7 +3,7 @@
 set -u
 
 readonly plugin_name='Lofi Radio'
-readonly lofi_url='https://www.youtube.com/live/X4VbdwhkE10'
+readonly lofi_url='https://www.youtube.com/@LofiGirl/live'
 readonly synthwave_url='https://www.youtube.com/watch?v=4xDzrJKXOOY'
 readonly runtime_base="${XDG_RUNTIME_DIR:-/tmp}"
 readonly runtime_dir="$runtime_base/espi-lofi-radio-${UID}"
