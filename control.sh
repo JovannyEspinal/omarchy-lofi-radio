@@ -60,6 +60,13 @@ process_start_time() {
   printf '%s\n' "${stat_fields[19]}"
 }
 
+process_has_argument() {
+  local pid=$1 argument=$2 command_line
+  [[ -r /proc/$pid/cmdline ]] || return 1
+  command_line=$(tr '\0' ' ' <"/proc/$pid/cmdline") || return 1
+  [[ " $command_line " == *" $argument "* ]]
+}
+
 player_identity() {
   local pid pgid start_time executable actual_pgid actual_start_time actual_executable
   [[ -r $pid_path && -r $pgid_path && -r $start_time_path && -r $exe_path ]] || return 1
@@ -79,18 +86,45 @@ player_identity() {
   [[ $actual_executable == "$executable" ]] || return 1
   [[ ${actual_executable##*/} == chromium ]] || return 1
 
-  printf '%s %s\n' "$pid" "$pgid"
+  printf '%s %s %s %s\n' "$pid" "$pgid" "$start_time" "$executable"
+}
+
+orphan_player_identity() {
+  # Chromium can outlive the controller and lose its runtime metadata. Only
+  # match the headless player for this exact profile and its group leader.
+  local proc pid pgid sid start_time executable
+
+  for proc in /proc/[0-9]*; do
+    pid=${proc##*/}
+    [[ -r $proc/cmdline ]] || continue
+    executable=$(readlink -f "$proc/exe" 2>/dev/null) || continue
+    [[ ${executable##*/} == chromium ]] || continue
+    process_has_argument "$pid" '--headless=new' || continue
+    process_has_argument "$pid" "--user-data-dir=$profile_dir" || continue
+    pgid=$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ') || continue
+    sid=$(ps -o sid= -p "$pid" 2>/dev/null | tr -d ' ') || continue
+    [[ $pgid == "$pid" && $sid == "$pid" ]] || continue
+    start_time=$(process_start_time "$pid") || continue
+    printf '%s %s %s %s\n' "$pid" "$pgid" "$start_time" "$executable"
+    return 0
+  done
+
+  return 1
+}
+
+player_identity_or_orphan() {
+  player_identity || orphan_player_identity
 }
 
 player_pid() {
   local pid pgid
-  read -r pid pgid < <(player_identity) || return 1
+  read -r pid pgid < <(player_identity_or_orphan) || return 1
   printf '%s\n' "$pid"
 }
 
 player_pgid() {
-  local pid pgid
-  read -r pid pgid < <(player_identity) || return 1
+  local pid pgid start_time executable
+  read -r pid pgid start_time executable < <(player_identity_or_orphan) || return 1
   printf '%s\n' "$pgid"
 }
 
@@ -156,32 +190,55 @@ open_login() {
     'https://www.youtube.com/' >/dev/null 2>&1
 }
 
+player_record_matches() {
+  local expected_pid=$1 expected_pgid=$2 expected_start_time=$3 expected_executable=$4
+  local pid pgid start_time executable
+  read -r pid pgid start_time executable < <(player_identity_or_orphan) || return 1
+  [[ $pid == "$expected_pid" && $pgid == "$expected_pgid" \
+    && $start_time == "$expected_start_time" \
+    && $executable == "$expected_executable" ]]
+}
+
 stop_player() {
-  local pgid
-  if pgid=$(player_pgid); then
-    if pgid=$(player_pgid); then kill -CONT -- "-$pgid" 2>/dev/null || true; fi
-    if pgid=$(player_pgid); then kill -TERM -- "-$pgid" 2>/dev/null || true; fi
-    for _ in {1..30}; do
-      is_running || break
-      sleep 0.1
-    done
-    if pgid=$(player_pgid); then kill -KILL -- "-$pgid" 2>/dev/null || true; fi
+  local pid pgid start_time executable
+  if ! read -r pid pgid start_time executable < <(player_identity_or_orphan); then
+    rm -f -- "$pid_path" "$pgid_path" "$start_time_path" "$exe_path" "$paused_path"
+    return 0
   fi
+
+  if player_record_matches "$pid" "$pgid" "$start_time" "$executable"; then
+    kill -CONT -- "-$pgid" 2>/dev/null || true
+  fi
+  if player_record_matches "$pid" "$pgid" "$start_time" "$executable"; then
+    kill -TERM -- "-$pgid" 2>/dev/null || true
+  fi
+
+  for _ in {1..30}; do
+    kill -0 "$pid" 2>/dev/null || break
+    sleep 0.1
+  done
+
+  if kill -0 "$pid" 2>/dev/null && \
+    player_record_matches "$pid" "$pgid" "$start_time" "$executable"; then
+    kill -KILL -- "-$pgid" 2>/dev/null || true
+  fi
+
   rm -f -- "$pid_path" "$pgid_path" "$start_time_path" "$exe_path" "$paused_path"
 }
 
 toggle_player() {
-  local pgid
-  if ! is_running; then
+  local pid pgid start_time executable
+  if ! read -r pid pgid start_time executable < <(player_identity_or_orphan); then
     start_player
     return
   fi
-  pgid=$(player_pgid) || return 1
 
   if [[ -e $paused_path ]]; then
+    player_record_matches "$pid" "$pgid" "$start_time" "$executable" || return 1
     kill -CONT -- "-$pgid"
     rm -f -- "$paused_path"
   else
+    player_record_matches "$pid" "$pgid" "$start_time" "$executable" || return 1
     kill -STOP -- "-$pgid"
     : >"$paused_path"
   fi
