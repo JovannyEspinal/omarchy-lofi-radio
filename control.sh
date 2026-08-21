@@ -3,13 +3,15 @@
 set -u
 
 readonly plugin_name='Lofi Radio'
-readonly lofi_url='https://www.youtube.com/live/X4VbdwhkE10'
+readonly lofi_fallback_url='https://www.youtube.com/watch?v=rFZHOHl-L8A'
+readonly lofi_streams_url='https://www.youtube.com/@LofiGirl/streams'
 readonly synthwave_url='https://www.youtube.com/watch?v=4xDzrJKXOOY'
 readonly runtime_base="${XDG_RUNTIME_DIR:-/tmp}"
 readonly runtime_dir="$runtime_base/espi-lofi-radio-${UID}"
 readonly state_base="${XDG_STATE_HOME:-$HOME/.local/state}"
 readonly state_dir="$state_base/espi-lofi-radio"
 readonly profile_dir="$state_dir/chromium-profile"
+readonly lofi_url_cache="$state_dir/lofi-url"
 readonly pid_path="$runtime_dir/chromium.pid"
 readonly pgid_path="$runtime_dir/chromium.pgid"
 readonly start_time_path="$runtime_dir/chromium.start-time"
@@ -42,7 +44,42 @@ current_station() {
 }
 
 station_url() {
-  [[ $(current_station) == 2 ]] && printf '%s\n' "$synthwave_url" || printf '%s\n' "$lofi_url"
+  [[ $(current_station) == 2 ]] && printf '%s\n' "$synthwave_url" || resolve_lofi_url
+}
+
+resolve_lofi_url() {
+  local video_id resolved_url cached_url=
+
+  if command -v yt-dlp >/dev/null 2>&1; then
+    video_id=$(yt-dlp \
+      --flat-playlist \
+      --playlist-end 30 \
+      --no-warnings \
+      --print '%(id)s|%(live_status)s|%(title)s' \
+      "$lofi_streams_url" 2>/dev/null | awk -F '|' '
+        $2 == "is_live" && $3 ~ /^lofi hip hop radio/ && $3 ~ /beats to relax\/study to/ {
+          print $1
+          exit
+        }
+      ') || video_id=
+
+    if [[ $video_id =~ ^[A-Za-z0-9_-]{11}$ ]]; then
+      resolved_url="https://www.youtube.com/watch?v=$video_id"
+      printf '%s\n' "$resolved_url" >"$lofi_url_cache"
+      printf '%s\n' "$resolved_url"
+      return 0
+    fi
+  fi
+
+  if [[ -r $lofi_url_cache ]]; then
+    read -r cached_url <"$lofi_url_cache" || cached_url=
+    if [[ $cached_url == https://www.youtube.com/watch\?v=* ]]; then
+      printf '%s\n' "$cached_url"
+      return 0
+    fi
+  fi
+
+  printf '%s\n' "$lofi_fallback_url"
 }
 
 station_name() {

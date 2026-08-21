@@ -21,6 +21,7 @@ Lofi Girl. Stream availability and rights remain with their respective owners.
 - Play/pause, station switching, and stop controls
 - Single-player locking and private per-user runtime files
 - Continuous playback through YouTube's official player in headless Chromium
+- Automatic discovery and caching of Lofi Girl's current main live broadcast
 - YouTube Premium support through a dedicated, persistent Chromium profile
 - Desktop notifications for invalid settings and missing dependencies
 - Runtime diagnostics in `$XDG_RUNTIME_DIR/espi-lofi-radio-$UID/chromium.log`
@@ -30,6 +31,7 @@ Lofi Girl. Stream availability and rights remain with their respective owners.
 - Omarchy Quattro
 - `chromium`
 - `cava`
+- `yt-dlp` (resolves the current live broadcast when YouTube rotates its video ID)
 - `flock` and `install` from standard Arch packages (`util-linux`, `coreutils`)
 
 The plugin never requests elevated privileges or installs packages itself.
@@ -37,7 +39,7 @@ The plugin never requests elevated privileges or installs packages itself.
 Install the required packages if they are not already present:
 
 ```sh
-omarchy pkg add chromium cava
+omarchy pkg add chromium cava yt-dlp
 ```
 
 ## YouTube Premium
